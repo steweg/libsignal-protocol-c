@@ -12,7 +12,6 @@
 #include "signal_protocol_internal.h"
 #include "signal_utarray.h"
 
-#define DJB_TYPE 0x05
 #define DJB_KEY_LEN 32
 #define VRF_VERIFY_LEN 32
 
@@ -51,12 +50,7 @@ int curve_decode_point(ec_public_key **public_key, const uint8_t *key_data, size
 {
     ec_public_key *key = 0;
 
-    if(key_len > 0 && key_data[0] != DJB_TYPE) {
-        signal_log(global_context, SG_LOG_ERROR, "Invalid key type: %d", key_data[0]);
-        return SG_ERR_INVALID_KEY;
-    }
-
-    if(key_len != DJB_KEY_LEN + 1) {
+    if(key_len != DJB_KEY_LEN) {
         signal_log(global_context, SG_LOG_ERROR, "Invalid key length: %d", key_len);
         return SG_ERR_INVALID_KEY;
     }
@@ -68,7 +62,7 @@ int curve_decode_point(ec_public_key **public_key, const uint8_t *key_data, size
 
     SIGNAL_INIT(key, ec_public_key_destroy);
 
-    memcpy(key->data, key_data + 1, DJB_KEY_LEN);
+    memcpy(key->data, key_data, DJB_KEY_LEN);
 
     *public_key = key;
 
@@ -116,14 +110,13 @@ int ec_public_key_serialize(signal_buffer **buffer, const ec_public_key *key)
         return SG_ERR_INVAL;
     }
 
-    buf = signal_buffer_alloc(sizeof(uint8_t) * (DJB_KEY_LEN + 1));
+    buf = signal_buffer_alloc(sizeof(uint8_t) * DJB_KEY_LEN);
     if(!buf) {
         return SG_ERR_NOMEM;
     }
 
     data = signal_buffer_data(buf);
-    data[0] = DJB_TYPE;
-    memcpy(data + 1, key->data, DJB_KEY_LEN);
+    memcpy(data, key->data, DJB_KEY_LEN);
 
     *buffer = buf;
 
@@ -138,14 +131,13 @@ int ec_public_key_serialize_protobuf(ProtobufCBinaryData *buffer, const ec_publi
     assert(buffer);
     assert(key);
 
-    len = sizeof(uint8_t) * (DJB_KEY_LEN + 1);
+    len = sizeof(uint8_t) * DJB_KEY_LEN;
     data = malloc(len);
     if(!data) {
         return SG_ERR_NOMEM;
     }
 
-    data[0] = DJB_TYPE;
-    memcpy(data + 1, key->data, DJB_KEY_LEN);
+    memcpy(data, key->data, DJB_KEY_LEN);
 
     buffer->data = data;
     buffer->len = len;
