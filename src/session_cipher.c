@@ -265,6 +265,7 @@ int session_cipher_decrypt_pre_key_signal_message(session_cipher *cipher,
     session_record *record = 0;
     int has_unsigned_pre_key_id = 0;
     uint32_t unsigned_pre_key_id = 0;
+    uint8_t identity_was_saved = 0;
 
     assert(cipher);
     signal_lock(cipher->global_context);
@@ -284,6 +285,7 @@ int session_cipher_decrypt_pre_key_signal_message(session_cipher *cipher,
         goto complete;
     }
     has_unsigned_pre_key_id = result;
+    identity_was_saved = 1;
 
     result = session_cipher_decrypt_from_record_and_signal_message(cipher, record,
             pre_key_signal_message_get_signal_message(ciphertext),
@@ -315,6 +317,10 @@ complete:
         *plaintext = result_buf;
     }
     else {
+        if(identity_was_saved) {
+            signal_protocol_identity_save_identity(cipher->store, cipher->remote_address, NULL);
+        }
+
         signal_buffer_free(result_buf);
     }
     signal_unlock(cipher->global_context);
